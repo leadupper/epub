@@ -5,15 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Lumina EPUB - EPUB 閱讀器與全功能編輯器</title>
 
-  <!-- PWA 與行動裝置標準 Meta 標籤 -->
+  <!-- 行動裝置標準 Meta 標籤 -->
   <meta name="theme-color" content="#4f46e5">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Lumina EPUB">
   <meta name="mobile-web-app-capable" content="yes">
-  <meta name="description" content="離線 EPUB 閱讀器與全功能編輯器">
+  <meta name="description" content="EPUB 閱讀器與全功能編輯器">
 
-  <!-- 內聯 PWA 圖標 (SVG Data URI) -->
+  <!-- 內聯圖標 (SVG Data URI) -->
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='42' fill='%234f46e5'/%3E%3Cpath d='M48 144A16 16 0 0 1 64 128H152' stroke='%23ffffff' stroke-width='14' stroke-linecap='round' fill='none'/%3E%3Cpath d='M64 48H152V160H64A16 16 0 0 1 48 144V64A16 16 0 0 1 64 48z' stroke='%23ffffff' stroke-width='14' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E">
   <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='42' fill='%234f46e5'/%3E%3Cpath d='M48 144A16 16 0 0 1 64 128H152' stroke='%23ffffff' stroke-width='14' stroke-linecap='round' fill='none'/%3E%3Cpath d='M64 48H152V160H64A16 16 0 0 1 48 144V64A16 16 0 0 1 64 48z' stroke='%23ffffff' stroke-width='14' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E">
 
@@ -520,6 +520,32 @@
       box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2);
     }
 
+    /* 拖放覆蓋層 (Drag & Drop Overlay) */
+    .drag-drop-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(79, 70, 229, 0.15);
+      backdrop-filter: blur(5px);
+      border: 3px dashed var(--primary);
+      z-index: 9999;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+    }
+    .drag-drop-overlay.active {
+      display: flex;
+    }
+    .drag-drop-box {
+      background: var(--bg-surface);
+      padding: 2.5rem 3.5rem;
+      border-radius: var(--radius-lg);
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+      text-align: center;
+      pointer-events: auto;
+      border: 1px solid var(--border);
+    }
+
     @media (max-width: 768px) {
       .navbar { padding: 0 1rem; height: 64px; }
       .brand-subtitle, .badge-primary { display: none; }
@@ -535,6 +561,15 @@
 </head>
 <body>
 
+  <!-- 拖放上傳提示視窗 -->
+  <div class="drag-drop-overlay" id="drag-drop-overlay">
+    <div class="drag-drop-box">
+      <div style="font-size: 3.5rem; margin-bottom: 1rem;">📥</div>
+      <div style="font-size: 1.25rem; font-weight: 700; color: var(--text-main);">放開以匯入 EPUB 書籍</div>
+      <div style="font-size: 0.875rem; color: var(--text-muted); margin-top: 6px;">支援由電腦直接拖放單本或多本電子書</div>
+    </div>
+  </div>
+
   <!-- 頂部全域導航 -->
   <header class="navbar">
     <div class="brand-wrap" onclick="showShelfView()">
@@ -544,23 +579,19 @@
       <div>
         <div class="brand-title">
           <span>Lumina EPUB</span>
-          <span class="badge badge-primary">離線可用</span>
+          <span class="badge badge-primary">離線</span>
         </div>
-        <div class="brand-subtitle">優雅的離線 EPUB 閱讀器與全功能編輯器</div>
+        <div class="brand-subtitle">EPUB 閱讀器與全功能編輯器</div>
       </div>
     </div>
 
     <div class="nav-actions">
-      <!-- PWA 安裝按鈕 -->
-      <button class="btn btn-primary" id="btn-pwa-install" onclick="triggerPWAInstall()" style="display:none;">
-        <span>📲 安裝離線 App</span>
-      </button>
 
       <button class="btn" onclick="createNewEmptyBook()">📄 新建空書</button>
       <button class="btn btn-primary" onclick="document.getElementById('file-import-input').click()">
         <span>⬆️ 匯入書籍</span>
       </button>
-      <input type="file" id="file-import-input" accept=".epub">
+      <input type="file" id="file-import-input" accept=".epub" multiple>
       <button class="btn" onclick="toggleTheme()" title="切換深淺模式">🌗</button>
     </div>
   </header>
@@ -574,7 +605,7 @@
             <span>📖 我的書籍收藏</span>
             <span style="font-size: 1rem; color: var(--text-muted);" id="books-count-tag">(0 本)</span>
           </div>
-          <div class="shelf-subtitle">全數資料本機離線保存，隨時可在各裝置無縫同步閱讀進度與筆記</div>
+          <div class="shelf-subtitle">全數資料本機離線保存，支援電腦直接拖入書籍</div>
         </div>
 
         <div class="search-box">
@@ -691,94 +722,8 @@
     </div>
   </section>
 
- 
 
   <script>
-    /* =========================================================================
-       0. PWA 核心模組
-       ========================================================================= */
-    let deferredPrompt = null;
-
-    function initPWACapabilities() {
-      const manifestJson = {
-        name: "Lumina EPUB Studio",
-        short_name: "Lumina EPUB",
-        description: "優雅的離線 EPUB 閱讀器與全功能編輯器",
-        start_url: window.location.href.split('#')[0],
-        display: "standalone",
-        orientation: "any",
-        background_color: "#090d16",
-        theme_color: "#4f46e5",
-        icons: [
-          {
-            src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='42' fill='%234f46e5'/%3E%3Cpath d='M48 144A16 16 0 0 1 64 128H152' stroke='%23ffffff' stroke-width='14' stroke-linecap='round' fill='none'/%3E%3Cpath d='M64 48H152V160H64A16 16 0 0 1 48 144V64A16 16 0 0 1 64 48z' stroke='%23ffffff' stroke-width='14' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E",
-            sizes: "192x192 512x512",
-            type: "image/svg+xml",
-            purpose: "any maskable"
-          }
-        ]
-      };
-
-      const manifestBlob = new Blob([JSON.stringify(manifestJson)], { type: "application/json" });
-      const manifestUrl = URL.createObjectURL(manifestBlob);
-      const link = document.createElement("link");
-      link.rel = "manifest";
-      link.href = manifestUrl;
-      document.head.appendChild(link);
-
-      if ('serviceWorker' in navigator && (window.location.protocol === 'https:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
-        const swScript = `
-          const CACHE_NAME = 'lumina-epub-cache-v2';
-          self.addEventListener('install', (e) => self.skipWaiting());
-          self.addEventListener('activate', (e) => e.waitUntil(clients.claim()));
-          self.addEventListener('fetch', (e) => {
-            e.respondWith(
-              caches.match(e.request).then((res) => {
-                return res || fetch(e.request).then((networkRes) => {
-                  return caches.open(CACHE_NAME).then((cache) => {
-                    if (e.request.method === 'GET' && e.request.url.startsWith('http')) {
-                      cache.put(e.request, networkRes.clone());
-                    }
-                    return networkRes;
-                  });
-                }).catch(() => caches.match(e.request));
-              })
-            );
-          });
-        `;
-        const swBlob = new Blob([swScript], { type: "application/javascript" });
-        const swUrl = URL.createObjectURL(swBlob);
-
-        navigator.serviceWorker.register(swUrl).catch(err => {
-          console.warn("[Lumina PWA] SW 註冊提示：", err);
-        });
-      }
-
-      window.addEventListener('beforeinstallprompt', (e) => {
-        e.preventDefault();
-        deferredPrompt = e;
-        const installBtn = document.getElementById("btn-pwa-install");
-        if (installBtn) installBtn.style.display = "inline-flex";
-      });
-
-      window.addEventListener('appinstalled', () => {
-        deferredPrompt = null;
-        const installBtn = document.getElementById("btn-pwa-install");
-        if (installBtn) installBtn.style.display = "none";
-        alert("🎉 Lumina EPUB 已成功安裝至您的裝置桌面！");
-      });
-    }
-
-    async function triggerPWAInstall() {
-      if (!deferredPrompt) {
-        alert("提示：若您使用的是 iOS Safari，請點擊底部的「分享」按鈕，選擇「加入主畫面」即可安裝！");
-        return;
-      }
-      deferredPrompt.prompt();
-      await deferredPrompt.userChoice;
-      deferredPrompt = null;
-      document.getElementById("btn-pwa-install").style.display = "none";
-    }
 
     /* =========================================================================
        1. 資料模型與核心狀態 (State & DB)
@@ -847,8 +792,8 @@
         coverImage: null,
         images: {},
         chapters: [
-          { id: "c1", title: "第一章：歡迎使用 Lumina", content: "<h1>歡迎使用 Lumina EPUB</h1><p>這是一個集成了<b>優雅離線閱讀</b>與<b>標準出版級編輯</b>的現代化工具。</p><p>本系統已完全支援 PWA 規範，你可以點擊右上角的<b>「📲 安裝離線 App」</b>，直接將它安裝在手機或電腦桌面上獨立運行，體驗如同原生應用程式！</p><p>在電腦端使用鍵盤左右鍵，或在手機端直接左右滑動螢幕即可流暢翻頁。</p>" },
-          { id: "c2", title: "第二章：跨平台同步指南", content: "<h1>跨平台同步指南</h1><p>本軟體支援 WebDAV 標準開放協議，所有資料完全儲存於您的私有本機或雲端。</p>" }
+          { id: "c1", title: "第一章：歡迎使用 Lumina", content: "<h1>歡迎使用 Lumina EPUB</h1><p>這是一個集成了<b>閱讀</b>與<b>標準出版級編輯</b>的現代化工具。</p><p>本系統已完全支援直接由電腦<b>拖入 .epub 檔案</b></p><p>在電腦端使用鍵盤左右鍵，或在手機端直接左右滑動螢幕即可流暢翻頁。</p>" },
+          { id: "c2", title: "第二章：安全", content: "<h1>安全</h1><p>本軟體支援離線操作，所有資料完全儲存於您的私有本機。</p>" }
         ]
       };
       
@@ -1273,10 +1218,9 @@
     }
 
     /* =========================================================================
-       5. EPUB 匯入與標準 XHTML 匯出修復模組
+       5. EPUB 核心解析與匯入模組（支援拖放與按鈕選取）
        ========================================================================= */
 
-    // 特殊字元跳脫，保護 OPF 與導航 TOC
     function escapeXml(str) {
       if (!str) return '';
       return String(str)
@@ -1287,13 +1231,10 @@
         .replace(/'/g, '&apos;');
     }
 
-    // 核心修復：將內文寬鬆 HTML 轉為 100% 合規 XHTML，解決 line 1 column error
     function htmlToValidXhtml(contentHtml, title, bookRef) {
       const parser = new DOMParser();
-      // 先用瀏覽器的寬鬆 HTML 解析器，修復未對齊或不規範的 tag
       const htmlDoc = parser.parseFromString(`<body>${contentHtml || ''}</body>`, 'text/html');
 
-      // 替換圖片路徑，確保全部指向 Images/ 目錄
       htmlDoc.body.querySelectorAll('img').forEach(img => {
         const epubSrc = img.getAttribute('data-epub-src');
         if (epubSrc) {
@@ -1308,7 +1249,6 @@
         if (!img.getAttribute('alt')) img.setAttribute('alt', 'image');
       });
 
-      // 建立嚴格的 XHTML 命名空間文件
       const xhtmlDoc = document.implementation.createDocument('http://www.w3.org/1999/xhtml', 'html', null);
       const htmlEl = xhtmlDoc.documentElement;
 
@@ -1323,8 +1263,6 @@
       htmlEl.appendChild(headEl);
 
       const bodyEl = xhtmlDoc.createElementNS('http://www.w3.org/1999/xhtml', 'body');
-
-      // 匯入節點，XMLSerializer 將強制為 <br />、<img /> 閉合
       Array.from(htmlDoc.body.childNodes).forEach(node => {
         bodyEl.appendChild(xhtmlDoc.importNode(node, true));
       });
@@ -1334,9 +1272,8 @@
       return '<?xml version="1.0" encoding="utf-8"?>\n<!DOCTYPE html>\n' + serializer.serializeToString(xhtmlDoc);
     }
 
-    document.getElementById("file-import-input").addEventListener("change", async (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
+    // 通用 EPUB 解析核心
+    async function processEpubFile(file) {
       try {
         const zip = await JSZip.loadAsync(file);
         const containerDoc = new DOMParser().parseFromString(await zip.file("META-INF/container.xml").async("text"), "application/xml");
@@ -1344,7 +1281,7 @@
         const basePath = opfPath.includes("/") ? opfPath.substring(0, opfPath.lastIndexOf("/") + 1) : "";
         const opfDoc = new DOMParser().parseFromString(await zip.file(opfPath).async("text"), "application/xml");
 
-        const title = opfDoc.querySelector("title")?.textContent || file.name.replace('.epub','');
+        const title = opfDoc.querySelector("title")?.textContent || file.name.replace(/\.epub$/i, '');
         const creator = opfDoc.querySelector("creator")?.textContent || "佚名";
         const language = opfDoc.querySelector("language")?.textContent || "zh-TW";
 
@@ -1390,20 +1327,81 @@
         }
 
         const newBook = {
-          id: "book-" + Date.now(),
+          id: "book-" + Date.now() + "-" + Math.random().toString(36).substring(2, 6),
           title, creator, language, coverImage, images, chapters,
           progressChapter: 0
         };
         allBooks.unshift(newBook);
         saveBookToDB(newBook);
-        renderShelf();
-        alert(`成功匯入《${title}》共 ${chapters.length} 章！`);
+        return { success: true, title, chapters: chapters.length };
       } catch (err) {
-        alert("EPUB 解析失敗：" + err.message);
+        console.error("EPUB 解析錯誤：", err);
+        return { success: false, filename: file.name, error: err.message };
       }
+    }
+
+    // 按鈕點選匯入監聽
+    document.getElementById("file-import-input").addEventListener("change", async (e) => {
+      const files = Array.from(e.target.files);
+      if (files.length === 0) return;
+      let count = 0;
+      for (const f of files) {
+        const res = await processEpubFile(f);
+        if (res.success) count++;
+      }
+      renderShelf();
+      alert(`已成功匯入 ${count} 本書籍！`);
       e.target.value = "";
     });
 
+    // 電腦直接拖放 (Drag & Drop) 監聽
+    let dragCounter = 0;
+    const dropOverlay = document.getElementById("drag-drop-overlay");
+
+    window.addEventListener("dragenter", (e) => {
+      e.preventDefault();
+      dragCounter++;
+      if (e.dataTransfer && e.dataTransfer.types && Array.from(e.dataTransfer.types).includes("Files")) {
+        dropOverlay.classList.add("active");
+      }
+    });
+
+    window.addEventListener("dragleave", (e) => {
+      e.preventDefault();
+      dragCounter--;
+      if (dragCounter <= 0) {
+        dragCounter = 0;
+        dropOverlay.classList.remove("active");
+      }
+    });
+
+    window.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "copy";
+    });
+
+    window.addEventListener("drop", async (e) => {
+      e.preventDefault();
+      dragCounter = 0;
+      dropOverlay.classList.remove("active");
+
+      const files = Array.from(e.dataTransfer.files).filter(f => f.name.toLowerCase().endsWith(".epub"));
+      if (files.length === 0) return;
+
+      let imported = 0;
+      for (const f of files) {
+        const res = await processEpubFile(f);
+        if (res.success) imported++;
+      }
+
+      renderShelf();
+      showShelfView();
+      alert(`🎉 拖放完成！已成功匯入 ${imported} 本書籍至書庫。`);
+    });
+
+    /* =========================================================================
+       6. EPUB 匯出與視圖輔助工具
+       ========================================================================= */
     async function exportEpubById(bookId, e) {
       if (e) e.stopPropagation();
       const b = allBooks.find(item => item.id === bookId);
@@ -1427,7 +1425,6 @@
       let manifestXml = '';
       let spineXml = '';
 
-      // 封面處理
       if (book.coverImage) {
         imgFolder.file(book.coverImage.filename, book.coverImage.data);
         manifestXml += `  <item id="cover-img" href="Images/${escapeXml(book.coverImage.filename)}" media-type="${escapeXml(book.coverImage.mime)}" properties="cover-image"/>\n`;
@@ -1436,7 +1433,6 @@
         spineXml += `  <itemref idref="cover-page"/>\n`;
       }
 
-      // 內嵌圖片處理
       if (book.images) {
         let i = 1;
         for (const [fn, fObj] of Object.entries(book.images)) {
@@ -1445,7 +1441,6 @@
         }
       }
 
-      // 章節處理（使用 htmlToValidXhtml 保證 XML 合規）
       book.chapters.forEach((chap, idx) => {
         const fn = `chap_${idx + 1}.xhtml`;
         const cleanXhtml = htmlToValidXhtml(chap.content, chap.title, book);
@@ -1454,12 +1449,10 @@
         spineXml += `  <itemref idref="c_${idx+1}"/>\n`;
       });
 
-      // 目錄導航 (EPUB 3 Nav)
       const navList = book.chapters.map((c, i) => `<li><a href="chap_${i+1}.xhtml">${escapeXml(c.title)}</a></li>`).join('\n      ');
       oebps.file("nav.xhtml", `<?xml version="1.0" encoding="utf-8"?>\n<!DOCTYPE html>\n<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops"><head><title>TOC</title></head><body><nav epub:type="toc"><ol>\n      ${navList}\n    </ol></nav></body></html>`);
       manifestXml += `  <item id="toc" href="nav.xhtml" media-type="application/xhtml+xml" properties="nav"/>\n`;
 
-      // 元資料清單 (OPF)
       oebps.file("content.opf", `<?xml version="1.0" encoding="utf-8"?>\n<package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="BId">\n<metadata xmlns:dc="http://purl.org/dc/elements/1.1/">\n  <dc:title>${escapeXml(book.title)}</dc:title>\n  <dc:creator>${escapeXml(book.creator)}</dc:creator>\n  <dc:language>${escapeXml(book.language || 'zh-TW')}</dc:language>\n  <dc:identifier id="BId">urn:uuid:${Date.now()}</dc:identifier>\n  <meta property="dcterms:modified">${new Date().toISOString().replace(/\.[0-9]+Z$/,'Z')}</meta>\n  ${book.coverImage ? '<meta name="cover" content="cover-img"/>':''}\n</metadata>\n<manifest>\n${manifestXml}</manifest>\n<spine>\n${spineXml}</spine>\n</package>`);
 
       const blob = await zip.generateAsync({ type: "blob", mimeType: "application/epub+zip" });
@@ -1469,9 +1462,6 @@
       a.click();
     }
 
-    /* =========================================================================
-       6. 視圖切換與輔助工具
-       ========================================================================= */
     function switchView(viewName) {
       document.querySelectorAll(".view-section").forEach(s => s.classList.remove("active"));
       document.getElementById(`view-${viewName}`).classList.add("active");
